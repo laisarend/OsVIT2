@@ -1,5 +1,4 @@
 define      = -DPOSRES  ; position restrain the protein and membrane
-; Run parameters
 integrator  = md        ; leap-frog integrator
 nsteps      = 2500000   ; 2 * 2500000 = 5000 ps (5 ns)
 dt          = 0.002     ; 2 fs
@@ -27,7 +26,7 @@ pme_order       = 4         ; cubic interpolation
 fourierspacing  = 0.16      ; grid spacing for FFT
 ; Temperature coupling is on
 tcoupl      = V-rescale                         ; modified Berendsen thermostat
-tc-grps     = Protein_POPC  SOD_CLA_TIP3        ; two coupling groups - more accurate (the groups depend on the system)
+tc-grps     = Protein_POPC  SOD_CLA_TIP3        ; two coupling groups - more accurate
 tau_t       = 0.5           0.5                 ; time constant, in ps
 ref_t       = 300           300                 ; reference temperature, one for each group, in K
 ; Pressure coupling is on
@@ -46,6 +45,6 @@ gen_vel     = no        ; Velocity generation is off
 ; These options remove motion of the protein/bilayer relative to the solvent/ions
 nstcomm         = 100
 comm-mode       = Linear
-comm-grps       = Protein_POPC SOD_CLA_TIP3 ; two coupling groups - more accurate (the groups depend on the system)
+comm-grps       = Protein_POPC SOD_CLA_TIP3
 ; Scale COM of reference coordinates
 refcoord_scaling = com
