@@ -47,4 +47,4 @@ gen_vel     = no        ; Velocity generation is off
 ; These options remove motion of the protein/bilayer relative to the solvent/ions
 nstcomm         = 100
 comm-mode       = Linear
-comm-grps       = Protein_POPC SOD_TIP3 (the groups depend on the system)
+comm-grps       = Protein_POPC SOD_TIP3 ; (the groups depend on the system)
