@@ -1,6 +1,4 @@
-;NVT parameters
 define                  = -DPOSRES  ; position restrain the protein and membrane 
-; Run parameters
 integrator              = md        ; leap-frog integrator
 nsteps                  = 2500000   ; 2 * 2500000 = 5000 ps = 5 ns
 dt                      = 0.002     ; 2 fs
