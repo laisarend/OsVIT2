@@ -1,20 +1,25 @@
+### load packages ###
 library(bio3d)
 library(igraph)
 library(RColorBrewer)
 library(colourvalues)
 
+### load and trim pdb ###
 pdb <- read.pdb("npt6.pdb")
 pdb.calpha <- trim.pdb(pdb = pdb, 'calpha')
 
+### load trajectory containting only alpha carbons in dcd format ###
 dcd <- read.dcd("dm_ca.dcd")
 inds <- atom.select(pdb.calpha)
 trj <- fit.xyz(fixed = pdb.calpha$xyz, mobile = dcd,
                fixed.inds = inds$xyz, mobile.inds = inds$xyz)
 
+### generate correlation matrix ###
 cij <- dccm(trj)
 
-cij.fe2p_filtered <- cij[c(39, 47, 51, 60, 68, 285, 293, 297, 306, 314),]
-average <- colMeans(abs(cij.fe2p_filtered))
+### calculate average correlation of pairs of Leu 47, 51 and 60 with every residue down the protein for the trajectory ###
+cij_filtered <- cij[c(39, 47, 51, 60, 68, 285, 293, 297, 306, 314),]
+average <- colMeans(abs(cij_filtered))
 dataset <- data.frame(modes = seq(1, 492, by=1), corr = average)
 dataset$col <- colour_values(dataset$corr, palette = "Viridis")
 
