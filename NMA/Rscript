@@ -1,10 +1,8 @@
-
+### load packages ###
 library(bio3d)
 library(igraph)
 
-#####################################################################################
-### function to displace structure along normal modes ###
-# up to a desired magnitude
+### function to displace structure along normal modes up to a desired magnitude ###
 displace.nma <- function(pdb,vec,rms,selection,outname){
   xyz <- as.vector(pdb$xyz)
   if(selection == 'calpha'){
@@ -20,9 +18,8 @@ displace.nma <- function(pdb,vec,rms,selection,outname){
   #coor <- t(cbind(xyz, plus))
   write.pdb(pdb=pdb, xyz = plus, file = outname)
 }
-#####################################################################################
-### function to generate linear combination of vectors ###
-# according to Eq. 1 in the JCTC paper (Costa et al, 2015)
+
+### function to generate linear combination of vectors according to Eq. 1 in Costa et al., 2015) ###
 combine <- function(M, v){
   n <- length(v)
   if(n > 1){
@@ -37,82 +34,33 @@ combine <- function(M, v){
   # normalize resulting vectors 
   out / sqrt(sum(out*out))
 }
-####################################################################################
 
+### load and trim pdb ###
 pdb <- read.pdb("npt6.pdb")
 pdb.calpha <- trim.pdb(pdb = pdb, 'calpha')
 
-modos <- aanma.pdb(pdb = pdb.calpha, outmodes = 'calpha', rtb = TRUE, keep = 100)
+### calculate normal modes ###
+modes.calpha <- aanma.pdb(pdb = pdb.calpha, outmodes = 'calpha', rtb = TRUE, keep = 100)
 
-
-### Visualize modes (in pymol or vmd etc.) ###
-mktrj(modos.ca, mode=10, pdb=pdb, file = 'mode_10.pdb')
-for(i in 7:20){
-  mktrj(modos.ca, mode=i, pdb=pdb, file = paste0('mode_',i,'.pdb'))
-}
-
-
-
-### investigando correlações entre resíduos por modo ###
-# este loop cria uma lista com um objeto cij por modo
-list.cij <- list()
-for(i in 7:100){
-  modos.temp <- modos.ca
-  modos.temp$U <- modos.ca$U[,c(1:6,i)] 
-  modos.temp$L <- modos.ca$L[c(1:6,i)]
-  cij <- dccm.nma(x = modos.temp, nmodes = 1)
-  if (cij[21, 39] < -0.5 | cij[21, 39] > 0.5) {
-    list.cij[[i-6]] <- cij
-  }
-}
-
-
-modos.temp <- modos.ca
-modos.temp$U <- modos.ca$U[,c(1:6, 97)] 
-modos.temp$L <- modos.ca$L[c(1:6, 97)]
-cij.97 <- dccm.nma(x = modos.temp, nmodes = 1)
-
-
-correlation_21_39 <- data.frame(Modo = 7:100, correlation = NA)
-for(i in 7:100){
-  correlation_21_39$correlation[i-6] <- list.cij[[i-6]][21, 39]
-}
-
-correlation_reordered <- correlation_GLU68 %>% arrange(correlation)
-correlation_reordered <- filter(correlation_reordered, correlation < 0)
-
-for(i in c(correlation_2_reordered$Modo)){
-  mktrj(modos, mode=i, pdb=pdb, file = paste0('mode_68-314_',i,'.pdb'))
-}
-
-###script alternativo
-
+### identify modes that contribute to pore opening ###
 prot <- length(pdb.calpha$atom$type)
-
-#dataframe para elencar os modos selecionados
-modos_distancias <- data.frame(matrix(ncol=6, nrow=0))
-
-# distância na estrutura de referência
+modes_distances <- data.frame(matrix(ncol=6, nrow=0))
 d_ref <- dm(pdb.calpha)
 d.ref_leu47 <- d_ref[47,293]
 d.ref_leu51 <- d_ref[51,297]
 d.ref_leu60 <- d_ref[60,306]
 d.ref_asp39 <- d_ref[39,285]
 d.ref_glu68 <- d_ref[68,314]
-
-# parâmetro para controlar a seleção de modos
 threshold_1.0 = 1.0
 threshold_0.5 = 0.5
-
 accepted.modes <- NULL
 for(i in 7:100){
   subset=c(i)
   nmodes=length(subset)
   mode.dir= c(-1,1)
-  # testando deslocamento no sentido positivo do modo
   for(alpha.q in mode.dir){
     q <- matrix(0, nr = 3*prot, nc = length(subset))
-    q  <- modos_ca_200$U[,subset]
+    q  <- modes.calpha$U[,subset]
     Q.aux <- combine(q, alpha.q)
     displace.nma(pdb = pdb.calpha, vec = Q.aux, rms = 2, selection = 'calpha', outname = paste0("trial.pdb"))
     trial.pdb <- read.pdb("trial.pdb")
@@ -126,46 +74,31 @@ for(i in 7:100){
     #dist.E68$dist[dist.E68$mode == i] <- d.trial 
     if(d.trial_leu47 - d.ref_leu47 > threshold_0.5 & d.trial_leu51 - d.ref_leu51 > threshold_0.5 & d.trial_leu60 - d.ref_leu60 > threshold_0.5){
       accepted.modes <- c(i,accepted.modes)
-      modos_distancias[nrow(modos_distancias)+1,] = c(i, d.trial_leu47 - d.ref_leu47, d.trial_leu51 - d.ref_leu51, d.trial_leu60 - d.ref_leu60, d.trial_asp39 - d.ref_asp39, d.trial_glu68 - d.ref_glu68)
+      modes_distances[nrow(modes_distances)+1,] = c(i, d.trial_leu47 - d.ref_leu47, d.trial_leu51 - d.ref_leu51, d.trial_leu60 - d.ref_leu60, d.trial_asp39 - d.ref_asp39, d.trial_glu68 - d.ref_glu68)
       #write.table(x = alpha.q, file = "alphas.txt", append = T, quote = F, row.names = F, col.names = subset)
       #system(command = paste0("mv trial.pdb mode",i,".pdb"))
     }
   }
 }
- 
-# criar trajetórias para visualização dos modos selecionados
-# com base no critério de contribuir para a variação das distâncias entre os resíduos de interesse 
+
+### generate trajectories to visualize selected modes ###
 for(i in accepted.modes){
-  mktrj(modos.ca, mode=i, pdb=pdb.calpha, mag = 15, step = 5,
+  mktrj(modes.calpha, mode=i, pdb=pdb.calpha, mag = 15, step = 5,
         file = paste0('./accepted_mode_',i,'.pdb'))
   print(i)
 }
 
-#############################################################################################
-
-pdb.calpha$xyz
-length(Q.aux)
-
-write.pdb(pdb = pdb.noh, file = 'npt6_noh.pdb', xyz = pdb.noh$xyz)
-write.table(modos_distancias, file = 'distances')
-
-cij.fe2p_filtered <- cij[c(39, 47, 51, 60, 68, 285, 293, 297, 306, 314),]
-
-library(RColorBrewer)
-library(colourvalues)
-average <- colMeans(abs(cij.fe2p_filtered))
-dataset <- data.frame(modes = seq(1, 492, by=1), corr = average)
-dataset$col <- colour_values(dataset$corr, palette = "Viridis")
-
-plot(seq(1, 492, by = 1), dataset$corr, col = dataset[["col"]], type = 'h', lwd = 15, xaxp = c(0, 500, 50), ylim = c(0, 1))
-
-average <- colMeans(cij.combined_filtered)
-
-corr_values <- seq(-1, 1, by = 0.1)
-corr_values_viridis <- colour_values(corr_values, palette = "Viridis")
+modos.temp <- modos.ca
+modos.temp$U <- modos.ca$U[,c(1:6, 97)] 
+modos.temp$L <- modos.ca$L[c(1:6, 97)]
+cij.97 <- dccm.nma(x = modos.temp, nmodes = 1)
 
 
-dataset <- data.frame(modes = seq(1, 492, by=1), node.betweenness)
-dataset$col <- colour_values(dataset$node.betweenness, palette = "Viridis")
 
-plot(seq(1, 492, by = 1), abs(dataset$node.betweenness), col = dataset[["col"]], type = 'h', lwd = 10, xaxp = c(0, 500, 50))
+
+
+
+
+
+
+
