@@ -1,6 +1,8 @@
 ### load packages ###
 library(bio3d)
 library(igraph)
+library(RColorBrewer)
+library(colourvalues)
 
 ### function to displace structure along normal modes up to a desired magnitude ###
 displace.nma <- function(pdb,vec,rms,selection,outname){
@@ -19,7 +21,7 @@ displace.nma <- function(pdb,vec,rms,selection,outname){
   write.pdb(pdb=pdb, xyz = plus, file = outname)
 }
 
-### function to generate linear combination of vectors according to Eq. 1 in Costa et al., 2015) ###
+### function to generate linear combination of vectors according to Eq. 1 in Costa et al. (2015) ###
 combine <- function(M, v){
   n <- length(v)
   if(n > 1){
@@ -71,12 +73,9 @@ for(i in 7:100){
     d.trial_leu47 <- d_trial[47,293]
     d.trial_leu51 <- d_trial[51,297]
     d.trial_leu60 <- d_trial[60,306]
-    #dist.E68$dist[dist.E68$mode == i] <- d.trial 
     if(d.trial_leu47 - d.ref_leu47 > threshold_0.5 & d.trial_leu51 - d.ref_leu51 > threshold_0.5 & d.trial_leu60 - d.ref_leu60 > threshold_0.5){
       accepted.modes <- c(i,accepted.modes)
       modes_distances[nrow(modes_distances)+1,] = c(i, d.trial_leu47 - d.ref_leu47, d.trial_leu51 - d.ref_leu51, d.trial_leu60 - d.ref_leu60, d.trial_asp39 - d.ref_asp39, d.trial_glu68 - d.ref_glu68)
-      #write.table(x = alpha.q, file = "alphas.txt", append = T, quote = F, row.names = F, col.names = subset)
-      #system(command = paste0("mv trial.pdb mode",i,".pdb"))
     }
   }
 }
@@ -88,10 +87,20 @@ for(i in accepted.modes){
   print(i)
 }
 
-modos.temp <- modos.ca
-modos.temp$U <- modos.ca$U[,c(1:6, 97)] 
-modos.temp$L <- modos.ca$L[c(1:6, 97)]
-cij.97 <- dccm.nma(x = modos.temp, nmodes = 1)
+### calculate average correlation of pairs of Leu 47, 51 and 60 with every residue down the protein for a selected mode and generate plot ###
+modes.temp <- modes.calpha
+modes.temp$U <- modes.calpha$U[,c(1:6, 97)] 
+modes.temp$L <- modes.calpha$L[c(1:6, 97)]
+cij.97 <- dccm.nma(x = modes.temp, nmodes = 1)
+
+cij.97_filtered <- cij.97[c(39, 47, 51, 60, 68, 285, 293, 297, 306, 314),]
+average <- colMeans(abs(cij.97_filtered))
+dataset <- data.frame(modes = seq(1, 492, by=1), corr = average)
+dataset$col <- colour_values(dataset$corr, palette = "Viridis")
+
+plot(seq(1, 492, by = 1), dataset$corr, col = dataset[["col"]], type = 'h', lwd = 15, xaxp = c(0, 500, 50), ylim = c(0, 1))
+
+
 
 
 
