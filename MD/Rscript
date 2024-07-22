@@ -1,0 +1,21 @@
+library(bio3d)
+library(igraph)
+library(RColorBrewer)
+library(colourvalues)
+
+pdb <- read.pdb("npt6.pdb")
+pdb.calpha <- trim.pdb(pdb = pdb, 'calpha')
+
+dcd <- read.dcd("dm_ca.dcd")
+inds <- atom.select(pdb.calpha)
+trj <- fit.xyz(fixed = pdb.calpha$xyz, mobile = dcd,
+               fixed.inds = inds$xyz, mobile.inds = inds$xyz)
+
+cij <- dccm(trj)
+
+cij.fe2p_filtered <- cij[c(39, 47, 51, 60, 68, 285, 293, 297, 306, 314),]
+average <- colMeans(abs(cij.fe2p_filtered))
+dataset <- data.frame(modes = seq(1, 492, by=1), corr = average)
+dataset$col <- colour_values(dataset$corr, palette = "Viridis")
+
+plot(seq(1, 492, by = 1), dataset$corr, col = dataset[["col"]], type = 'h', lwd = 15, xaxp = c(0, 500, 50), ylim = c(0, 1))
